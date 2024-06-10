@@ -1,22 +1,39 @@
 name: test
-on: [ push, pull_request ]
+on: [push, pull_request]
 jobs:
   test:
     strategy:
       matrix:
-        os: [ ubuntu-20.04, windows-2019 ]
+        os: [ubuntu-20.04, windows-2019]
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v2
+    
+    - name: Install 32-bit libraries on Ubuntu
+      if: ${{ matrix.os == 'ubuntu-20.04' }}
+      run: |
+        sudo dpkg --add-architecture i386
+        sudo apt-get update
+        sudo apt-get install -y gcc-multilib libc6:i386 libgcc1:i386 libstdc++6:i386
+    
     - name: Install D compiler
       uses: dlang-community/setup-dlang@1ccbc70a0eff7f264857b53c562aa45fd7f1e479
       with:
         compiler: dmd-2.100.0
+
     - name: Build
       run: dmd -m32 dhcptest.d
+
     - name: Upload binary
       if: ${{ matrix.os == 'windows-2019' }}
       uses: actions/upload-artifact@v2
       with:
         name: dhcptest-${{ matrix.os }}
         path: dhcptest.exe
+
+    - name: Upload binary (Ubuntu)
+      if: ${{ matrix.os == 'ubuntu-20.04' }}
+      uses: actions/upload-artifact@v2
+      with:
+        name: dhcptest-${{ matrix.os }}
+        path: dhcptest
